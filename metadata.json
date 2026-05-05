@@ -1,0 +1,6 @@
+{
+  "name": "SpendWise AI",
+  "description": "A modern expense tracker with AI categorization, real-time analytics, and budget management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["AI Expense Categorization", "Financial Analytics", "Budget Tracking"]
+}
