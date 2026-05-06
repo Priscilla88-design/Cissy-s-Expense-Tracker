@@ -4,29 +4,28 @@
  */
 
 import { useState } from 'react';
-import { Wallet, Activity, TrendingUp, History } from 'lucide-react';
+import { Wallet, Activity, TrendingUp, History, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ExpenseForm from './components/ExpenseForm';
 import ExpenseList from './components/ExpenseList';
 import Analytics from './components/Analytics';
-import { useLocalStorage } from './hooks/useLocalStorage';
+import { useAuth } from './hooks/useAuth';
+import { useExpenses } from './hooks/useExpenses';
+import { login, logout } from './firebase';
 import { Expense } from './types';
 
 export default function App() {
-  const [expenses, setExpenses] = useLocalStorage<Expense[]>('spendwise-expenses', []);
+  const { user, loading: authLoading } = useAuth();
+  const { expenses, addExpense, removeExpense, loading: expensesLoading } = useExpenses(user?.uid);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'history' | 'add'>('dashboard');
 
-  const handleAddExpense = (newExpense: Omit<Expense, 'id'>) => {
-    const expense: Expense = {
-      ...newExpense,
-      id: crypto.randomUUID(),
-    };
-    setExpenses([expense, ...expenses]);
+  const handleAddExpense = async (newExpense: Omit<Expense, 'id'>) => {
+    await addExpense(newExpense);
     setActiveTab('dashboard');
   };
 
-  const handleDeleteExpense = (id: string) => {
-    setExpenses(expenses.filter(e => e.id !== id));
+  const handleDeleteExpense = async (id: string) => {
+    await removeExpense(id);
   };
 
   const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -34,15 +33,56 @@ export default function App() {
     .filter(e => new Date(e.date).getMonth() === new Date().getMonth())
     .reduce((sum, e) => sum + e.amount, 0);
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-brand-bg flex items-center justify-center font-serif italic text-slate-400">
+        Syncing Ledger...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-brand-bg flex items-center justify-center p-6">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full bg-white rounded-lg border border-slate-200 shadow-xl overflow-hidden"
+        >
+          <div className="p-8 text-center space-y-6">
+            <div className="w-16 h-16 bg-indigo-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-indigo-100">
+              <Wallet className="w-8 h-8 text-white" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900">Ledger.ai</h1>
+              <p className="text-slate-500 font-serif italic">Secure, AI-powered expenditure tracking.</p>
+            </div>
+            <button 
+              onClick={login}
+              className="w-full bg-indigo-600 text-white py-3 rounded font-bold text-sm uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 shadow-md"
+            >
+              Sign in with Google
+            </button>
+          </div>
+          <div className="bg-slate-50 px-8 py-4 border-t border-slate-100 text-[10px] text-slate-400 uppercase tracking-widest text-center">
+            Encrypted • Private • Audited
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div id="app-container" className="flex h-screen w-full bg-brand-bg text-slate-800 font-sans overflow-hidden">
       {/* Sidebar */}
       <aside className="w-64 bg-brand-sidebar text-white flex flex-col shrink-0">
-        <div className="p-6 border-b border-slate-700 flex items-center gap-3">
-          <div className="w-8 h-8 bg-indigo-500 rounded flex items-center justify-center">
-            <Wallet className="w-4 h-4 text-white" />
+        <div className="p-6 border-b border-slate-700 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-indigo-500 rounded flex items-center justify-center">
+              <Wallet className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-bold tracking-tight text-lg">Ledger.ai</span>
           </div>
-          <span className="font-bold tracking-tight text-lg">Ledger.ai</span>
         </div>
         
         <nav className="flex-1 p-4 space-y-1">
@@ -81,14 +121,23 @@ export default function App() {
           </button>
         </nav>
 
-        <div className="p-4 border-t border-slate-700">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-slate-500 flex items-center justify-center text-[10px] font-bold">SJ</div>
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold">Sarah Jenkins</span>
-              <span className="text-[10px] text-slate-400">Pro Plan</span>
+        <div className="p-4 border-t border-slate-700 flex items-center justify-between">
+          <div className="flex items-center gap-3 overflow-hidden">
+            {user.photoURL ? (
+              <img src={user.photoURL} alt={user.displayName || ''} className="w-8 h-8 rounded-full border border-slate-600" referrerPolicy="no-referrer" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-slate-500 flex items-center justify-center text-[10px] font-bold">
+                {user.displayName?.charAt(0) || user.email?.charAt(0)}
+              </div>
+            )}
+            <div className="flex flex-col overflow-hidden">
+              <span className="text-xs font-semibold truncate">{user.displayName}</span>
+              <span className="text-[10px] text-slate-400 truncate">{user.email}</span>
             </div>
           </div>
+          <button onClick={logout} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors" title="Logout">
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
         </div>
       </aside>
 
@@ -131,53 +180,49 @@ export default function App() {
               >
                 {/* Top Stats */}
                 <div className="grid grid-cols-4 gap-4">
-                  <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Spent</div>
+                  <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Accounted</div>
                     <div className="text-2xl font-mono font-bold text-slate-900">${totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                    <div className="text-[10px] text-emerald-500 mt-1 flex items-center gap-1 font-bold">+0.0% <span className="text-slate-400 font-normal">vs last month</span></div>
                   </div>
-                  <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Monthly Spending</div>
+                  <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Monthly Burn</div>
                     <div className="text-2xl font-mono font-bold text-slate-900">${monthlySpending.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                    <div className="text-[10px] text-rose-500 mt-1 flex items-center gap-1 font-bold">+0.0% <span className="text-slate-400 font-normal">vs budget</span></div>
                   </div>
-                  <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Savings Goal</div>
-                    <div className="text-2xl font-mono font-bold text-slate-900">$840.15</div>
-                    <div className="w-full bg-slate-100 h-1 rounded-full mt-3 overflow-hidden"><div className="bg-indigo-500 h-full w-3/4"></div></div>
+                  <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Account Health</div>
+                    <div className="text-2xl font-mono font-bold text-slate-900">100%</div>
+                    <div className="w-full bg-slate-100 h-1 rounded-full mt-3 overflow-hidden"><div className="bg-indigo-500 h-full w-full"></div></div>
                   </div>
-                  <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Credit Score</div>
-                    <div className="text-2xl font-mono font-bold text-slate-900">748</div>
-                    <div className="text-[10px] text-slate-400 mt-1">Excellent health</div>
+                  <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Sync Status</div>
+                    <div className="text-2xl font-mono font-bold text-emerald-600">LIVE</div>
+                    <div className="text-[10px] text-slate-400 mt-1 italic">Firestore DB Active</div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-12 gap-6">
-                  <div className="col-span-8 flex flex-col gap-6">
+                  <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
                     <Analytics expenses={expenses} />
                     <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
                       <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center">
                         <h3 className="text-sm font-bold text-slate-700">Recent Transactions</h3>
                         <button onClick={() => setActiveTab('history')} className="text-[10px] font-bold text-indigo-600 hover:underline">VIEW ALL</button>
                       </div>
-                      <ExpenseList expenses={expenses.slice(0, 7)} onDelete={handleDeleteExpense} isCompact />
+                      <ExpenseList expenses={expenses.slice(0, 10)} onDelete={handleDeleteExpense} isCompact />
                     </div>
                   </div>
 
-                  <div className="col-span-4 space-y-6">
+                  <div className="col-span-12 lg:col-span-4 space-y-6">
                     <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                      <h3 className="text-sm font-bold text-slate-700 mb-4">Budget Tracking</h3>
+                      <h3 className="text-sm font-bold text-slate-700 mb-4 font-serif italic">Budget Allocation</h3>
                       <div className="space-y-4">
                         {[
-                          { label: 'Food', spent: 420, total: 500, color: 'bg-orange-400' },
-                          { label: 'Transport', spent: 210, total: 400, color: 'bg-emerald-500' },
-                          { label: 'Shopping', spent: 650, total: 450, color: 'bg-rose-500' }
+                          { label: 'Standard', spent: monthlySpending, total: 2500, color: 'bg-indigo-500' }
                         ].map(b => (
                           <div key={b.label}>
                             <div className="flex justify-between text-[10px] font-bold mb-1">
-                              <span className="text-slate-500 uppercase">{b.label}</span>
-                              <span className="text-slate-900">${b.spent} / ${b.total}</span>
+                              <span className="text-slate-500 uppercase">MONTHLY CAP</span>
+                              <span className="text-slate-900">${b.spent.toFixed(0)} / ${b.total}</span>
                             </div>
                             <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                               <div className={`${b.color} h-full transition-all`} style={{ width: `${Math.min((b.spent/b.total)*100, 100)}%` }}></div>
@@ -217,9 +262,11 @@ export default function App() {
                 className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden"
               >
                  <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center">
-                  <h3 className="text-sm font-bold text-slate-700 font-serif italic">Full Audit Log</h3>
+                  <h3 className="text-sm font-bold text-slate-700 font-serif italic">Full Transaction Audit</h3>
                 </div>
-                <ExpenseList expenses={expenses} onDelete={handleDeleteExpense} />
+                <div className="overflow-x-auto">
+                  <ExpenseList expenses={expenses} onDelete={handleDeleteExpense} />
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -228,4 +275,5 @@ export default function App() {
     </div>
   );
 }
+
 

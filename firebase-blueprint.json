@@ -1,0 +1,42 @@
+{
+  "entities": {
+    "Expense": {
+      "title": "Expense",
+      "description": "A single financial transaction recorded by the user.",
+      "type": "object",
+      "properties": {
+        "description": { "type": "string", "description": "What the money was spent on." },
+        "amount": { "type": "number", "description": "The amount spent." },
+        "date": { "type": "string", "format": "date", "description": "ISO date string of when the expense occurred." },
+        "category": { "type": "string", "enum": ["Food", "Transport", "Utilities", "Entertainment", "Health", "Shopping", "Other"] },
+        "aiCategorized": { "type": "boolean", "description": "Whether AI was used for categorization." },
+        "userId": { "type": "string", "description": "The UID of the user who owns this expense." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["description", "amount", "date", "category", "userId", "createdAt", "updatedAt"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Public and private user information.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document."
+    },
+    "users/{userId}/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Collection of expenses for a specific user."
+    }
+  }
+}
