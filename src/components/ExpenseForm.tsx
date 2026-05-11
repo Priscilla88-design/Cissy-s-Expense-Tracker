@@ -7,6 +7,17 @@ interface ExpenseFormProps {
   onAddExpense: (expense: Omit<Expense, 'id'>) => void;
 }
 
+function OKButton({ label = "Button", type = "button" }: { label?: string; type?: "button" | "submit" }) {
+  return (
+    <div className="flex items-center gap-4 group p-2 bg-white/40 rounded-2xl w-fit">
+      <div className="border-[2.5px] border-[#007AFF] rounded-[12px] px-4 py-1.5 flex items-center justify-center min-w-[60px] shadow-sm">
+        <span className="text-[#007AFF] font-black text-sm leading-none uppercase tracking-wider">OK</span>
+      </div>
+      <span className="text-[#334155] font-bold text-xl tracking-tight leading-none pr-4">{label}</span>
+    </div>
+  );
+}
+
 export default function ExpenseForm({ onAddExpense }: ExpenseFormProps) {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -68,7 +79,7 @@ export default function ExpenseForm({ onAddExpense }: ExpenseFormProps) {
 
       <div className="grid grid-cols-2 gap-5">
         <div className="space-y-1.5">
-          <label htmlFor="amount" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Amount ($)</label>
+          <label htmlFor="amount" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Amount (GH₵)</label>
           <input
             id="amount"
             type="number"
@@ -110,10 +121,9 @@ export default function ExpenseForm({ onAddExpense }: ExpenseFormProps) {
       <button
         id="add-expense-submit"
         type="submit"
-        className="mt-4 w-full bg-indigo-600 text-white py-2.5 rounded font-bold text-xs uppercase tracking-wider hover:bg-indigo-700 shadow-sm transition-all flex items-center justify-center gap-2"
+        className="mt-6 w-fit bg-transparent transition-all active:scale-95 outline-none"
       >
-        <Plus className="w-3.5 h-3.5" />
-        Record Transaction
+        <OKButton label="Commit Transaction" type="submit" />
       </button>
     </form>
   );

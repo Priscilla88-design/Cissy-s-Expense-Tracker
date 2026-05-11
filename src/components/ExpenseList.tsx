@@ -1,7 +1,8 @@
-import { Trash2, TrendingUp, TrendingDown, ChevronUp, ChevronDown } from 'lucide-react';
+import { Trash2, TrendingUp, TrendingDown, ChevronUp, ChevronDown, Check } from 'lucide-react';
 import { Expense, Category } from '../types';
 import { format } from 'date-fns';
 import { useState, useMemo } from 'react';
+import * as Checkbox from '@radix-ui/react-checkbox';
 
 interface DataGridProps {
   expenses: Expense[];
@@ -100,17 +101,22 @@ export default function DataGrid({ expenses, onDelete, isCompact }: DataGridProp
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 border-b border-slate-100">
-            <tr>
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-[#F8F9FA] border-y border-slate-100">
               {!isCompact && (
-                <th className="px-4 py-2 w-8">
-                  <input 
-                    type="checkbox" 
-                    onChange={toggleSelectAll}
-                    checked={selectedIds.size === expenses.length && expenses.length > 0}
-                    className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                  />
+                <th className="px-8 py-5 w-10">
+                  <div className="flex items-center">
+                    <Checkbox.Root
+                      className="flex h-5 w-5 appearance-none items-center justify-center rounded-[4px] bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-[#5D85EE] data-[state=checked]:bg-[#5D85EE] data-[state=checked]:border-[#5D85EE]"
+                      checked={selectedIds.size === expenses.length && expenses.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    >
+                      <Checkbox.Indicator className="text-white">
+                        <Check className="w-3 h-3" />
+                      </Checkbox.Indicator>
+                    </Checkbox.Root>
+                  </div>
                 </th>
               )}
               {[
@@ -139,13 +145,16 @@ export default function DataGrid({ expenses, onDelete, isCompact }: DataGridProp
             {sortedExpenses.map((expense) => (
               <tr key={expense.id} className={`hover:bg-slate-50 transition-colors group ${selectedIds.has(expense.id) ? 'bg-indigo-50/30' : ''}`}>
                 {!isCompact && (
-                  <td className="px-4 py-2.5">
-                    <input 
-                      type="checkbox" 
+                  <td className="px-8 py-4">
+                    <Checkbox.Root
+                      className="flex h-5 w-5 appearance-none items-center justify-center rounded-[4px] bg-white border border-slate-200 outline-none focus:ring-2 focus:ring-[#5D85EE] data-[state=checked]:bg-[#5D85EE] data-[state=checked]:border-[#5D85EE]"
                       checked={selectedIds.has(expense.id)}
-                      onChange={() => toggleSelect(expense.id)}
-                      className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                    />
+                      onCheckedChange={() => toggleSelect(expense.id)}
+                    >
+                      <Checkbox.Indicator className="text-white">
+                        <Check className="w-3 h-3" />
+                      </Checkbox.Indicator>
+                    </Checkbox.Root>
                   </td>
                 )}
                 <td className="px-4 py-2.5 text-xs text-slate-500 font-mono">
@@ -164,7 +173,7 @@ export default function DataGrid({ expenses, onDelete, isCompact }: DataGridProp
                   </span>
                 </td>
                 <td className={`px-4 py-2.5 text-xs font-mono font-bold text-right ${expense.amount > 0 ? 'text-slate-900' : 'text-emerald-600'}`}>
-                  {expense.amount > 0 ? '-' : '+'}${Math.abs(expense.amount).toFixed(2)}
+                  {expense.amount > 0 ? '-' : '+'}GH₵{Math.abs(expense.amount).toFixed(2)}
                 </td>
                 {!isCompact && (
                   <td className="px-4 py-2.5 text-right opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">

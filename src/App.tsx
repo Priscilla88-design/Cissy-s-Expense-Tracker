@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { Wallet, Activity, TrendingUp, History, LogOut, Filter, CheckCircle2, Calendar, User, Info } from 'lucide-react';
 import { useState, useMemo } from 'react';
-import { Wallet, Activity, TrendingUp, History, LogOut, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ExpenseForm from './components/ExpenseForm';
 import ExpenseList from './components/ExpenseList';
@@ -14,6 +14,21 @@ import { useAuth } from './hooks/useAuth';
 import { useExpenses } from './hooks/useExpenses';
 import { login, logout } from './firebase';
 import { Expense, ExpenseFilters } from './types';
+
+function OKButton({ label = "Button", onClick, type = "button" }: { label?: string; onClick?: () => void; type?: "button" | "submit" }) {
+  return (
+    <button 
+      onClick={onClick}
+      type={type}
+      className="flex items-center gap-4 group hover:opacity-80 transition-all p-2 bg-white/40 rounded-2xl hover:bg-white/60"
+    >
+      <div className="border-[2.5px] border-[#007AFF] rounded-[12px] px-4 py-1.5 flex items-center justify-center min-w-[60px] shadow-sm">
+        <span className="text-[#007AFF] font-black text-sm leading-none uppercase tracking-wider">OK</span>
+      </div>
+      <span className="text-[#334155] font-bold text-xl tracking-tight leading-none pr-4">{label}</span>
+    </button>
+  );
+}
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -109,125 +124,106 @@ export default function App() {
   }
 
   return (
-    <div id="app-container" className="flex h-screen w-full bg-brand-bg text-slate-800 font-sans overflow-hidden">
+    <div id="app-container" className="flex h-screen w-full bg-[#EBF0F6] text-slate-800 font-sans overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 bg-brand-sidebar text-white flex flex-col shrink-0">
-        <div className="p-6 border-b border-slate-700 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-indigo-500 rounded flex items-center justify-center">
-              <Wallet className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-bold tracking-tight text-lg">Ledger.ai</span>
+      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0">
+        {/* Logo Section */}
+        <div className="p-6 flex items-center gap-2 mb-4">
+          <div className="w-10 h-10 bg-[#007AFF] rounded-full flex items-center justify-center shadow-lg shadow-blue-100">
+            <Wallet className="w-5 h-5 text-white" />
           </div>
+          <span className="font-black tracking-tight text-[#007AFF] text-lg uppercase leading-none">Expense Tracker</span>
         </div>
         
-        <nav className="flex-1 p-4 space-y-1">
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-              activeTab === 'dashboard' 
-                ? 'bg-indigo-600/20 text-indigo-400 border-l-2 border-indigo-500' 
-                : 'text-slate-400 hover:text-white hover:bg-slate-800 border-l-2 border-transparent'
-            }`}
-          >
-            <Activity className="w-4 h-4" />
-            Dashboard
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-              activeTab === 'history' 
-                ? 'bg-indigo-600/20 text-indigo-400 border-l-2 border-indigo-500' 
-                : 'text-slate-400 hover:text-white hover:bg-slate-800 border-l-2 border-transparent'
-            }`}
-          >
-            <History className="w-4 h-4" />
-            Transactions
-          </button>
-          <button
-            onClick={() => setActiveTab('add')}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-              activeTab === 'add' 
-                ? 'bg-indigo-600/20 text-indigo-400 border-l-2 border-indigo-500' 
-                : 'text-slate-400 hover:text-white hover:bg-slate-800 border-l-2 border-transparent'
-            }`}
-          >
-            <TrendingUp className="w-4 h-4" />
-            Add Expense
-          </button>
-        </nav>
-
-        <div className="p-4 border-t border-slate-700 flex items-center justify-between">
-          <div className="flex items-center gap-3 overflow-hidden">
+        {/* User Profile Section */}
+        <div className="px-6 py-2 flex flex-col items-center">
+          <div className="relative mb-3 group">
             {user.photoURL ? (
-              <img src={user.photoURL} alt={user.displayName || ''} className="w-8 h-8 rounded-full border border-slate-600" referrerPolicy="no-referrer" />
+              <img src={user.photoURL} alt={user.displayName || ''} className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md" referrerPolicy="no-referrer" />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-slate-500 flex items-center justify-center text-[10px] font-bold">
+              <div className="w-24 h-24 rounded-full bg-slate-100 flex items-center justify-center text-2xl font-bold text-slate-300 border-4 border-white shadow-md">
                 {user.displayName?.charAt(0) || user.email?.charAt(0)}
               </div>
             )}
-            <div className="flex flex-col overflow-hidden">
-              <span className="text-xs font-semibold truncate">{user.displayName}</span>
-              <span className="text-[10px] text-slate-400 truncate">{user.email}</span>
+          </div>
+          <h2 className="font-bold text-slate-800 text-sm mb-4">{user.displayName || 'Nicholas Delacruz'}</h2>
+          
+          <div className="w-full bg-[#F8F9FA] border border-slate-100 rounded-lg p-2 px-4 flex items-center justify-between shadow-sm mb-8">
+            <div className="flex items-center gap-2">
+              <Wallet className="w-4 h-4 text-slate-400" />
+              <span className="text-sm font-bold text-slate-700">GH₵{totalSpent.toLocaleString()}</span>
             </div>
           </div>
-          <button onClick={logout} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors" title="Logout">
-            <LogOut className="w-3.5 h-3.5" />
+        </div>
+
+        {/* Navigation Sidebar */}
+        <nav className="flex-1 px-4 space-y-1">
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={`w-full flex items-center gap-4 px-6 py-3 rounded-full transition-all duration-300 group ${
+              activeTab === 'dashboard' 
+                ? 'bg-[#5D85EE] text-white shadow-lg shadow-blue-100' 
+                : 'text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            <span className="font-bold text-sm">Dashboard</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`w-full flex items-center gap-4 px-6 py-3 rounded-full transition-all duration-300 group ${
+              activeTab === 'history' 
+                ? 'bg-[#5D85EE] text-white shadow-lg shadow-blue-100' 
+                : 'text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            <History className="w-4 h-4" />
+            <span className="font-bold text-sm">Transactions</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('add')}
+            className={`w-full flex items-center gap-4 px-6 py-3 rounded-full transition-all duration-300 group ${
+              activeTab === 'add' 
+                ? 'bg-[#5D85EE] text-white shadow-lg shadow-blue-100' 
+                : 'text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4" />
+            <span className="font-bold text-sm">About</span>
+          </button>
+        </nav>
+
+        {/* Footer Area */}
+        <div className="p-6 border-t border-slate-100">
+          <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-rose-500 transition-colors text-[10px] font-bold uppercase tracking-widest">
+            <LogOut className="w-4 h-4" />
+            Log Out System
           </button>
         </div>
       </aside>
 
-      {/* Main Content Area */}
+      {/* Main View Area */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
-          <h1 className="text-xl font-bold text-slate-800">
-            {activeTab === 'dashboard' && 'Financial Overview'}
-            {activeTab === 'history' && 'Transaction History'}
-            {activeTab === 'add' && 'New Transaction'}
+        {/* Top Header */}
+        <header className="h-16 bg-transparent flex items-center justify-between px-8 shrink-0">
+          <h1 className="text-lg font-bold text-slate-600">
+            {activeTab === 'dashboard' && 'Dashboard'}
+            {activeTab === 'history' && 'Transactions History'}
+            {activeTab === 'add' && 'Project Information'}
           </h1>
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setShowFilters(!showFilters)}
-              className={`p-2 rounded-md border transition-all ${showFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
-              title="Toggle Filters"
-            >
-              <Filter className="w-4 h-4" />
-            </button>
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-md border border-slate-200">
-              <span className="text-xs font-medium text-slate-500">
-                {new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })} — {new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
-              </span>
-            </div>
-            {activeTab !== 'add' && (
-              <button 
-                onClick={() => setActiveTab('add')}
-                className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded shadow-sm hover:bg-indigo-700 uppercase tracking-wider"
-              >
-                Add Transaction
-              </button>
-            )}
+          
+          <div className="bg-white border border-slate-200 rounded-lg px-4 py-2 flex items-center gap-4 shadow-sm">
+            <span className="text-xs font-bold text-slate-500">
+              08/05/2026 - 11/05/2026
+            </span>
+            <Calendar className="w-4 h-4 text-slate-400" />
           </div>
         </header>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        {/* Dynamic Content */}
+        <div className="flex-1 overflow-y-auto px-8 pb-8">
           <AnimatePresence mode="wait">
-            <motion.div
-              layout
-              className="space-y-6"
-            >
-              {showFilters && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden"
-                >
-                  <Filters filters={filters} setFilters={setFilters} maxAmount={maxExpenseAmount} />
-                </motion.div>
-              )}
-
+            <motion.div layout className="space-y-6 max-w-[1100px]">
               {activeTab === 'dashboard' && (
                 <motion.div
                   key="dashboard"
@@ -236,77 +232,35 @@ export default function App() {
                   exit={{ opacity: 0, y: -10 }}
                   className="space-y-6"
                 >
-                  {/* Top Stats */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Accounted</div>
-                      <div className="text-2xl font-mono font-bold text-slate-900">${totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  {/* Grid of Summaries */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm flex flex-col items-center justify-center">
+                      <div className="text-3xl font-bold text-[#4B75E5] mb-1">GH₵{(totalSpent * 1.2).toLocaleString()}</div>
+                      <div className="text-xs font-bold text-slate-400">Income</div>
                     </div>
-                    <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Monthly Burn</div>
-                      <div className="text-2xl font-mono font-bold text-slate-900">${monthlySpending.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm flex flex-col items-center justify-center">
+                      <div className="text-3xl font-bold text-[#FF5D8F] mb-1">GH₵{totalSpent.toLocaleString()}</div>
+                      <div className="text-xs font-bold text-slate-400">Expenses</div>
                     </div>
-                    <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm hidden lg:block">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Account Health</div>
-                      <div className="text-2xl font-mono font-bold text-slate-900">100%</div>
-                      <div className="w-full bg-slate-100 h-1 rounded-full mt-3 overflow-hidden"><div className="bg-indigo-500 h-full w-full"></div></div>
+                    <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm flex flex-col items-center justify-center">
+                      <div className="text-3xl font-bold text-[#62C97F] mb-1">GH₵{(totalSpent * 0.2).toLocaleString()}</div>
+                      <div className="text-xs font-bold text-slate-400">Balance</div>
                     </div>
-                    <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm hidden lg:block">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Sync Status</div>
-                      <div className="text-2xl font-mono font-bold text-emerald-600">LIVE</div>
-                      <div className="text-[10px] text-slate-400 mt-1 italic">Firestore DB Active</div>
+                    <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm flex flex-col items-center justify-center">
+                      <div className="text-3xl font-bold text-[#4CC9F0] mb-1">{expenses.length}</div>
+                      <div className="text-xs font-bold text-slate-400">Transactions</div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
-                      <Analytics expenses={filteredExpenses} />
-                      <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-                        <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center">
-                          <h3 className="text-sm font-bold text-slate-700">Recent Transactions</h3>
-                          <button onClick={() => setActiveTab('history')} className="text-[10px] font-bold text-indigo-600 hover:underline">VIEW ALL</button>
-                        </div>
-                        <ExpenseList expenses={filteredExpenses.slice(0, 10)} onDelete={handleDeleteExpense} isCompact />
+                  <div className="bg-white p-10 rounded-xl border border-slate-100 shadow-sm min-h-[500px]">
+                    <div className="flex justify-between items-start mb-8">
+                      <div>
+                        <h3 className="text-xl font-bold text-slate-800">Financial Ledger Analysis</h3>
+                        <p className="text-xs font-medium text-slate-400">Comprehensive expenditure breakdown • Aug 8 - May 11</p>
                       </div>
+                      <OKButton label="Analyze Ledger" onClick={() => setActiveTab('history')} />
                     </div>
-
-                    <div className="col-span-12 lg:col-span-4 space-y-6">
-                      <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                        <h3 className="text-sm font-bold text-slate-700 mb-4 font-serif italic">Budget Allocation</h3>
-                        <div className="space-y-4">
-                          {[
-                            { label: 'Standard', spent: filteredExpenses.reduce((s,e) => s+e.amount, 0), total: 2500, color: 'bg-indigo-500' }
-                          ].map(b => (
-                            <div key={b.label}>
-                              <div className="flex justify-between text-[10px] font-bold mb-1">
-                                <span className="text-slate-500 uppercase">SELECTED TOTAL</span>
-                                <span className="text-slate-900">${b.spent.toFixed(0)} / ${b.total}</span>
-                              </div>
-                              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                <div className={`${b.color} h-full transition-all`} style={{ width: `${Math.min((b.spent/b.total)*100, 100)}%` }}></div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {activeTab === 'add' && (
-                <motion.div
-                  key="add"
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  className="max-w-xl mx-auto"
-                >
-                  <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 italic font-serif text-slate-400 text-xs">Ledger / Add Transaction</div>
-                    <div className="p-6">
-                      <ExpenseForm onAddExpense={handleAddExpense} />
-                    </div>
+                    <Analytics expenses={filteredExpenses} />
                   </div>
                 </motion.div>
               )}
@@ -317,13 +271,49 @@ export default function App() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden"
+                  className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden"
                 >
-                  <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="text-sm font-bold text-slate-700 font-serif italic">Full Transaction Audit</h3>
+                  <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white">
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-700">Audit Trail</h3>
+                      <p className="text-xs font-medium text-slate-400">Full transaction history</p>
+                    </div>
+                    <button 
+                      onClick={() => setShowFilters(!showFilters)}
+                      className={`p-2 rounded-lg border transition-all ${showFilters ? 'bg-indigo-50 border-[#5D85EE] text-[#5D85EE]' : 'bg-white border-slate-200 text-slate-500'}`}
+                    >
+                      <Filter className="w-4 h-4" />
+                    </button>
                   </div>
+                  
+                  {showFilters && (
+                    <div className="p-8 border-b border-slate-50 bg-slate-50/30">
+                      <Filters filters={filters} setFilters={setFilters} maxAmount={maxExpenseAmount} />
+                    </div>
+                  )}
+                  
                   <div className="overflow-x-auto">
                     <ExpenseList expenses={filteredExpenses} onDelete={handleDeleteExpense} />
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'add' && (
+                <motion.div
+                  key="add"
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  className="max-w-2xl mx-auto"
+                >
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden">
+                    <div className="px-10 py-8 bg-[#F8F9FA] border-b border-slate-100">
+                      <h3 className="text-xl font-bold text-slate-800">Add New Expense</h3>
+                      <p className="text-sm text-slate-400">Enter transaction details below</p>
+                    </div>
+                    <div className="p-10">
+                      <ExpenseForm onAddExpense={handleAddExpense} />
+                    </div>
                   </div>
                 </motion.div>
               )}
