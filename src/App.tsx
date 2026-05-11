@@ -3,21 +3,57 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
-import { Wallet, Activity, TrendingUp, History, LogOut } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Wallet, Activity, TrendingUp, History, LogOut, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ExpenseForm from './components/ExpenseForm';
 import ExpenseList from './components/ExpenseList';
 import Analytics from './components/Analytics';
+import Filters from './components/Filters';
 import { useAuth } from './hooks/useAuth';
 import { useExpenses } from './hooks/useExpenses';
 import { login, logout } from './firebase';
-import { Expense } from './types';
+import { Expense, ExpenseFilters } from './types';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
-  const { expenses, addExpense, removeExpense, loading: expensesLoading } = useExpenses(user?.uid);
+  const { expenses, addExpense, removeExpense } = useExpenses(user?.uid);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'history' | 'add'>('dashboard');
+  const [showFilters, setShowFilters] = useState(false);
+
+  const maxExpenseAmount = useMemo(() => {
+    return expenses.length > 0 ? Math.max(...expenses.map(e => e.amount)) : 1000;
+  }, [expenses]);
+
+  const [filters, setFilters] = useState<ExpenseFilters>({
+    search: '',
+    categories: [],
+    dateRange: { start: '', end: '' },
+    amountRange: { min: 0, max: 10000 } // Will be updated by maxExpenseAmount logic potentially or just handle in component
+  });
+
+  // Initial max amount sync
+  useMemo(() => {
+    setFilters(f => ({ ...f, amountRange: { ...f.amountRange, max: Math.max(maxExpenseAmount, f.amountRange.max) } }));
+  }, [maxExpenseAmount]);
+
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(e => {
+      const matchesSearch = e.description.toLowerCase().includes(filters.search.toLowerCase());
+      const matchesCategory = filters.categories.length === 0 || filters.categories.includes(e.category);
+      const matchesAmount = e.amount >= filters.amountRange.min && e.amount <= filters.amountRange.max;
+      
+      let matchesDate = true;
+      if (filters.dateRange.start) {
+        matchesDate = matchesDate && new Date(e.date) >= new Date(filters.dateRange.start);
+      }
+      if (filters.dateRange.end) {
+        matchesDate = matchesDate && new Date(e.date) <= new Date(filters.dateRange.end);
+      }
+
+      return matchesSearch && matchesCategory && matchesAmount && matchesDate;
+    });
+  }, [expenses, filters]);
 
   const handleAddExpense = async (newExpense: Omit<Expense, 'id'>) => {
     await addExpense(newExpense);
@@ -28,7 +64,7 @@ export default function App() {
     await removeExpense(id);
   };
 
-  const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalSpent = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
   const monthlySpending = expenses
     .filter(e => new Date(e.date).getMonth() === new Date().getMonth())
     .reduce((sum, e) => sum + e.amount, 0);
@@ -151,7 +187,14 @@ export default function App() {
             {activeTab === 'add' && 'New Transaction'}
           </h1>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-md border border-slate-200">
+            <button 
+              onClick={() => setShowFilters(!showFilters)}
+              className={`p-2 rounded-md border transition-all ${showFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+              title="Toggle Filters"
+            >
+              <Filter className="w-4 h-4" />
+            </button>
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-md border border-slate-200">
               <span className="text-xs font-medium text-slate-500">
                 {new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })} — {new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
               </span>
@@ -170,105 +213,121 @@ export default function App() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           <AnimatePresence mode="wait">
-            {activeTab === 'dashboard' && (
-              <motion.div
-                key="dashboard"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="space-y-6"
-              >
-                {/* Top Stats */}
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Accounted</div>
-                    <div className="text-2xl font-mono font-bold text-slate-900">${totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                  </div>
-                  <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Monthly Burn</div>
-                    <div className="text-2xl font-mono font-bold text-slate-900">${monthlySpending.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                  </div>
-                  <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Account Health</div>
-                    <div className="text-2xl font-mono font-bold text-slate-900">100%</div>
-                    <div className="w-full bg-slate-100 h-1 rounded-full mt-3 overflow-hidden"><div className="bg-indigo-500 h-full w-full"></div></div>
-                  </div>
-                  <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Sync Status</div>
-                    <div className="text-2xl font-mono font-bold text-emerald-600">LIVE</div>
-                    <div className="text-[10px] text-slate-400 mt-1 italic">Firestore DB Active</div>
-                  </div>
-                </div>
+            <motion.div
+              layout
+              className="space-y-6"
+            >
+              {showFilters && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <Filters filters={filters} setFilters={setFilters} maxAmount={maxExpenseAmount} />
+                </motion.div>
+              )}
 
-                <div className="grid grid-cols-12 gap-6">
-                  <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
-                    <Analytics expenses={expenses} />
-                    <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-                      <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center">
-                        <h3 className="text-sm font-bold text-slate-700">Recent Transactions</h3>
-                        <button onClick={() => setActiveTab('history')} className="text-[10px] font-bold text-indigo-600 hover:underline">VIEW ALL</button>
-                      </div>
-                      <ExpenseList expenses={expenses.slice(0, 10)} onDelete={handleDeleteExpense} isCompact />
+              {activeTab === 'dashboard' && (
+                <motion.div
+                  key="dashboard"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-6"
+                >
+                  {/* Top Stats */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Accounted</div>
+                      <div className="text-2xl font-mono font-bold text-slate-900">${totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Monthly Burn</div>
+                      <div className="text-2xl font-mono font-bold text-slate-900">${monthlySpending.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm hidden lg:block">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Account Health</div>
+                      <div className="text-2xl font-mono font-bold text-slate-900">100%</div>
+                      <div className="w-full bg-slate-100 h-1 rounded-full mt-3 overflow-hidden"><div className="bg-indigo-500 h-full w-full"></div></div>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-sm hidden lg:block">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Sync Status</div>
+                      <div className="text-2xl font-mono font-bold text-emerald-600">LIVE</div>
+                      <div className="text-[10px] text-slate-400 mt-1 italic">Firestore DB Active</div>
                     </div>
                   </div>
 
-                  <div className="col-span-12 lg:col-span-4 space-y-6">
-                    <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                      <h3 className="text-sm font-bold text-slate-700 mb-4 font-serif italic">Budget Allocation</h3>
-                      <div className="space-y-4">
-                        {[
-                          { label: 'Standard', spent: monthlySpending, total: 2500, color: 'bg-indigo-500' }
-                        ].map(b => (
-                          <div key={b.label}>
-                            <div className="flex justify-between text-[10px] font-bold mb-1">
-                              <span className="text-slate-500 uppercase">MONTHLY CAP</span>
-                              <span className="text-slate-900">${b.spent.toFixed(0)} / ${b.total}</span>
+                  <div className="grid grid-cols-12 gap-6">
+                    <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                      <Analytics expenses={filteredExpenses} />
+                      <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                        <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center">
+                          <h3 className="text-sm font-bold text-slate-700">Recent Transactions</h3>
+                          <button onClick={() => setActiveTab('history')} className="text-[10px] font-bold text-indigo-600 hover:underline">VIEW ALL</button>
+                        </div>
+                        <ExpenseList expenses={filteredExpenses.slice(0, 10)} onDelete={handleDeleteExpense} isCompact />
+                      </div>
+                    </div>
+
+                    <div className="col-span-12 lg:col-span-4 space-y-6">
+                      <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                        <h3 className="text-sm font-bold text-slate-700 mb-4 font-serif italic">Budget Allocation</h3>
+                        <div className="space-y-4">
+                          {[
+                            { label: 'Standard', spent: filteredExpenses.reduce((s,e) => s+e.amount, 0), total: 2500, color: 'bg-indigo-500' }
+                          ].map(b => (
+                            <div key={b.label}>
+                              <div className="flex justify-between text-[10px] font-bold mb-1">
+                                <span className="text-slate-500 uppercase">SELECTED TOTAL</span>
+                                <span className="text-slate-900">${b.spent.toFixed(0)} / ${b.total}</span>
+                              </div>
+                              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                <div className={`${b.color} h-full transition-all`} style={{ width: `${Math.min((b.spent/b.total)*100, 100)}%` }}></div>
+                              </div>
                             </div>
-                            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                              <div className={`${b.color} h-full transition-all`} style={{ width: `${Math.min((b.spent/b.total)*100, 100)}%` }}></div>
-                            </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
 
-            {activeTab === 'add' && (
-              <motion.div
-                key="add"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                className="max-w-xl mx-auto"
-              >
-                <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 border-b border-slate-100 italic font-serif text-slate-400 text-xs">Ledger / Add Transaction</div>
-                  <div className="p-6">
-                    <ExpenseForm onAddExpense={handleAddExpense} />
+              {activeTab === 'add' && (
+                <motion.div
+                  key="add"
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  className="max-w-xl mx-auto"
+                >
+                  <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-100 italic font-serif text-slate-400 text-xs">Ledger / Add Transaction</div>
+                    <div className="p-6">
+                      <ExpenseForm onAddExpense={handleAddExpense} />
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
 
-            {activeTab === 'history' && (
-              <motion.div
-                key="history"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden"
-              >
-                 <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center">
-                  <h3 className="text-sm font-bold text-slate-700 font-serif italic">Full Transaction Audit</h3>
-                </div>
-                <div className="overflow-x-auto">
-                  <ExpenseList expenses={expenses} onDelete={handleDeleteExpense} />
-                </div>
-              </motion.div>
-            )}
+              {activeTab === 'history' && (
+                <motion.div
+                  key="history"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden"
+                >
+                  <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center">
+                    <h3 className="text-sm font-bold text-slate-700 font-serif italic">Full Transaction Audit</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <ExpenseList expenses={filteredExpenses} onDelete={handleDeleteExpense} />
+                  </div>
+                </motion.div>
+              )}
+            </motion.div>
           </AnimatePresence>
         </div>
       </main>

@@ -7,6 +7,22 @@ export interface Expense {
   date: string;
   category: Category;
   aiCategorized: boolean;
+  userId?: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export interface ExpenseFilters {
+  search: string;
+  categories: Category[];
+  dateRange: {
+    start: string;
+    end: string;
+  };
+  amountRange: {
+    min: number;
+    max: number;
+  };
 }
 
 export const CATEGORIES: Category[] = ['Food', 'Transport', 'Utilities', 'Entertainment', 'Health', 'Shopping', 'Other'];

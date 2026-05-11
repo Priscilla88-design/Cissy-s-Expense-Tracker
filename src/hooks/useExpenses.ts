@@ -27,6 +27,7 @@ export function useExpenses(userId: string | undefined) {
     const path = `users/${userId}/expenses`;
     const q = query(
       collection(db, path),
+      where('userId', '==', userId),
       orderBy('date', 'desc'),
       orderBy('updatedAt', 'desc')
     );

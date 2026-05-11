@@ -12,7 +12,7 @@ service cloud.firestore {
     }
 
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId && emailVerified();
     }
 
     function isValidId(id) {
@@ -51,6 +51,7 @@ service cloud.firestore {
         && data.date is string && data.date.size() <= 20
         && data.category in ['Food', 'Transport', 'Utilities', 'Entertainment', 'Health', 'Shopping', 'Other']
         && data.userId == existing().userId
+        && data.aiCategorized is bool
         && data.createdAt == existing().createdAt
         && data.updatedAt == request.time;
     }
